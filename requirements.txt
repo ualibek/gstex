@@ -1,0 +1,13 @@
+# Core (install torch/torchvision first, matching your CUDA version)
+torch>=2.1
+torchvision>=0.16
+numpy
+Pillow
+tqdm
+
+# 3DGS
+gsplat>=1.4          # differentiable rasterization (needs CUDA toolkit to JIT-compile on first use)
+plyfile>=0.8.1       # 3DGS .ply IO
+
+# Optional accelerator (a chunked torch.cdist fallback is built in):
+# pytorch3d          # fast KNN for very large scenes
