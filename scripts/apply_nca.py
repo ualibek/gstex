@@ -20,11 +20,8 @@ from PIL import Image
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from gstex import GaussianModel, GaussianNCA
+from gstex import GaussianModel, load_nca_for_scene
 from gstex.render import sample_random_cameras, render_gaussians
-
-# Buffers rebuilt from the target scene's geometry; everything else transfers.
-SCENE_BUFFERS = ('geometry', 'perception.neighbors', 'perception.neighbor_basis')
 
 
 def parse_args():
@@ -42,37 +39,6 @@ def parse_args():
     p.add_argument('--device', type=str, default='cuda:0')
     p.add_argument('--seed', type=int, default=0)
     return p.parse_args()
-
-
-def load_nca_for_scene(checkpoint, gaussians, device):
-    """Build a GaussianNCA on `gaussians` and load the transferable weights."""
-    cfg = checkpoint['config']
-    nca = GaussianNCA(
-        gaussians,
-        sh_mode=cfg['sh_mode'],
-        n_hidden=cfg['n_hidden'],
-        knn_k=cfg['knn_k'],
-        basis_degree=cfg['basis_degree'],
-        n_filters=cfg['n_filters'],
-        hidden_dim=cfg['hidden_dim'],
-        fire_rate=cfg['fire_rate'],
-    ).to(device)
-
-    weights = {k: v for k, v in checkpoint['nca_state_dict'].items()
-               if k not in SCENE_BUFFERS}
-
-    trained_out = weights['update_mlp.2.bias'].shape[0]
-    if trained_out != nca.n_evolving:
-        raise ValueError(
-            f"Update MLP emits {trained_out} evolving channels but this scene needs "
-            f"{nca.n_evolving} — with sh_mode='full' the target scene's SH degree "
-            f"must match the training scene's.")
-
-    missing, unexpected = nca.load_state_dict(weights, strict=False)
-    assert not unexpected, unexpected
-    not_loaded = set(missing) - set(SCENE_BUFFERS)
-    assert not not_loaded, f"weights not found in checkpoint: {not_loaded}"
-    return nca, cfg
 
 
 def save_image(tensor, path):

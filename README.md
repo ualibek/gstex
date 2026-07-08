@@ -46,6 +46,19 @@ python train.py --scene data/scenes/<scene>.ply --texture data/textures/<tex>.jp
 #          out/<run>/textured.ply  (open in any 3DGS viewer)
 ```
 
+```bash
+# 2. Apply the trained NCA to another (unseen) scene — outputs textured.ply + renders
+python scripts/apply_nca.py --checkpoint out/<run>/checkpoints/nca_<iter>.pt \
+    --scene data/scenes/<other>/scene.ply
+
+# 3. Watch the texture grow: live web viewer (orbit while the NCA evolves) ...
+python scripts/view_nca.py --checkpoint out/<run>/checkpoints/nca_<iter>.pt \
+    --scene data/scenes/<other>/scene.ply          # http://localhost:8080
+
+# ... or render the evolution as an orbiting-camera video
+python scripts/view_nca.py --checkpoint ... --scene ... --video --n_steps 500
+```
+
 Gradient checkpointing of NCA steps is **on by default** (required at real scene scales;
 `--no-checkpoint_steps` to disable for small scenes). Further memory knobs: smaller
 `--batch_size` / `--max_steps` / `--n_filters` / `--knn_k`, and

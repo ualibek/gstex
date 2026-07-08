@@ -162,3 +162,43 @@ class GaussianNCA(nn.Module):
             state = state[0]
         colors = self.decode_colors(state[None])[0]                # [N, K, 3]
         return GaussianModel.split_sh(colors)
+
+
+# Buffers rebuilt from the target scene's geometry; the learnable weights
+# (perception filter bank + update MLP) transfer across scenes.
+SCENE_BUFFERS = ('geometry', 'perception.neighbors', 'perception.neighbor_basis')
+
+
+def load_nca_for_scene(checkpoint, gaussians, device):
+    """
+    Build a GaussianNCA on `gaussians` (any scene) and load the transferable
+    weights from a training checkpoint (as saved by Trainer.save_checkpoint).
+    :return: (nca, checkpoint config dict)
+    """
+    cfg = checkpoint['config']
+    nca = GaussianNCA(
+        gaussians,
+        sh_mode=cfg['sh_mode'],
+        n_hidden=cfg['n_hidden'],
+        knn_k=cfg['knn_k'],
+        basis_degree=cfg['basis_degree'],
+        n_filters=cfg['n_filters'],
+        hidden_dim=cfg['hidden_dim'],
+        fire_rate=cfg['fire_rate'],
+    ).to(device)
+
+    weights = {k: v for k, v in checkpoint['nca_state_dict'].items()
+               if k not in SCENE_BUFFERS}
+
+    trained_out = weights['update_mlp.2.bias'].shape[0]
+    if trained_out != nca.n_evolving:
+        raise ValueError(
+            f"Update MLP emits {trained_out} evolving channels but this scene needs "
+            f"{nca.n_evolving} — with sh_mode='full' the target scene's SH degree "
+            f"must match the training scene's.")
+
+    missing, unexpected = nca.load_state_dict(weights, strict=False)
+    assert not unexpected, unexpected
+    not_loaded = set(missing) - set(SCENE_BUFFERS)
+    assert not not_loaded, f"weights not found in checkpoint: {not_loaded}"
+    return nca, cfg

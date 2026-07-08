@@ -11,3 +11,11 @@ plyfile>=0.8.1       # 3DGS .ply IO
 
 # Optional accelerator (a chunked torch.cdist fallback is built in):
 # pytorch3d          # fast KNN for very large scenes
+
+# Viewer / video (scripts/view_nca.py)
+viser
+nerfview
+matplotlib           # nerfview deps it forgets to declare
+splines
+scipy
+imageio[ffmpeg]
