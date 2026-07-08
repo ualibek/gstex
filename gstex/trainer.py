@@ -12,8 +12,8 @@ import os
 import random
 
 import torch
-from tqdm import tqdm
 
+from .logger import TrainLogger
 from .nca import GaussianNCA
 from .render import sample_random_cameras, render_gaussians
 
@@ -46,12 +46,9 @@ class Trainer:
         self.center, self.radius = gaussians.scene_center_and_radius()
 
         self.out_dir = config['out_dir']
-        os.makedirs(os.path.join(self.out_dir, 'renders'), exist_ok=True)
         os.makedirs(os.path.join(self.out_dir, 'checkpoints'), exist_ok=True)
-
-        self.loss_csv = os.path.join(self.out_dir, 'loss_log.csv')
-        with open(self.loss_csv, 'w') as f:
-            f.write('iteration,loss,style_loss,overflow,n_steps,eval_loss\n')
+        self.logger = TrainLogger(self.out_dir, config['iterations'],
+                                  config['render_interval'], config['eval_interval'])
 
     # ------------------------------------------------------------------ #
     def _render_batch(self, states, n_views, width, height, background):
@@ -101,7 +98,7 @@ class Trainer:
 
         style_loss, loss_log, summary = self.loss_fn(
             {'rendered_images': images},
-            return_summary=(iteration % cfg['log_interval'] == 0),
+            return_summary=self.logger.render_due(iteration),
         )
         overflow = self._overflow_loss(states, self.nca.evolving_slice)
         loss = style_loss + cfg['overflow_weight'] * overflow
@@ -151,29 +148,11 @@ class Trainer:
 
     def train(self):
         cfg = self.cfg
-        progress = tqdm(range(1, cfg['iterations'] + 1), desc='train', dynamic_ncols=True)
-        for iteration in progress:
+        for iteration in self.logger.iterations():
             log, summary = self.train_step(iteration)
 
-            eval_loss = None
-            if iteration % cfg['eval_interval'] == 0:
-                eval_loss = self.eval_probe()
-                tqdm.write(f"[eval @ {iteration:6d}] deterministic style loss: {eval_loss:.4f}")
-
-            progress.set_postfix(
-                loss=f"{log['loss']:.4f}",
-                style=f"{log['style_loss']:.4f}",
-                overflow=f"{log['overflow']:.4f}",
-                steps=log['n_steps'],
-            )
-            with open(self.loss_csv, 'a') as f:
-                f.write(f"{iteration},{log['loss']:.6f},{log['style_loss']:.6f},"
-                        f"{log['overflow']:.6f},{log['n_steps']},"
-                        f"{'' if eval_loss is None else f'{eval_loss:.6f}'}\n")
-
-            if iteration % cfg['log_interval'] == 0 and summary is not None:
-                summary['images'].save(
-                    os.path.join(self.out_dir, 'renders', f'iter_{iteration:06d}.png'))
+            eval_loss = self.eval_probe() if self.logger.eval_due(iteration) else None
+            self.logger.log_iteration(iteration, log, summary, eval_loss)
 
             if iteration % cfg['checkpoint_interval'] == 0 or iteration == cfg['iterations']:
                 self.save_checkpoint(iteration)
@@ -204,4 +183,4 @@ class Trainer:
             f_rest = torch.zeros_like(self.gaussians.f_rest)
 
         self.gaussians.save_ply(path, f_dc=f_dc, f_rest=f_rest)
-        tqdm.write(f"Saved textured scene to {path}")
+        self.logger.message(f"Saved textured scene to {path}")

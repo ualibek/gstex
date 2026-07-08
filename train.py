@@ -50,7 +50,8 @@ def parse_args():
     p.add_argument('--background', type=str, default='black',
                    choices=['black', 'white', 'random'])
     # misc
-    p.add_argument('--log_interval', type=int, default=50)
+    p.add_argument('--render_interval', type=int, default=50,
+                   help='iterations between summary render snapshots')
     p.add_argument('--eval_interval', type=int, default=10,
                    help='iterations between deterministic eval-loss probes')
     p.add_argument('--checkpoint_interval', type=int, default=500)
