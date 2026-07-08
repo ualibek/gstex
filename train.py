@@ -10,8 +10,7 @@ import argparse
 
 import torch
 
-from appearance_loss import AppearanceLoss
-from gstex import GaussianModel, GaussianNCA, Trainer
+from gstex import AppearanceLoss, GaussianModel, GaussianNCA, Trainer
 
 
 def parse_args():
@@ -30,7 +29,7 @@ def parse_args():
     p.add_argument('--hidden_dim', type=int, default=128, help='update MLP width')
     p.add_argument('--fire_rate', type=float, default=0.5)
     # training
-    p.add_argument('--iterations', type=int, default=4000)
+    p.add_argument('--iterations', type=int, default=500)
     p.add_argument('--lr', type=float, default=1e-3)
     p.add_argument('--pool_size', type=int, default=16)
     p.add_argument('--batch_size', type=int, default=2)
@@ -52,7 +51,7 @@ def parse_args():
                    choices=['black', 'white', 'random'])
     # misc
     p.add_argument('--log_interval', type=int, default=50)
-    p.add_argument('--eval_interval', type=int, default=100,
+    p.add_argument('--eval_interval', type=int, default=10,
                    help='iterations between deterministic eval-loss probes')
     p.add_argument('--checkpoint_interval', type=int, default=500)
     p.add_argument('--device', type=str, default='cuda:0')

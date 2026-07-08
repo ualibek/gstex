@@ -4,9 +4,8 @@ gsplat rendering wrapper + random viewpoint sampling.
 Cameras follow gsplat conventions: viewmats are world->camera with OpenCV axes
 (x right, y down, z forward), intrinsics are pinhole K matrices.
 
-The spherical viewpoint sampling mirrors
-camera.py::PerspectiveCamera.generate_random_view_cameras (azimuth uniform,
-elevation uniform in sin) without the kaolin dependency.
+Random viewpoints are sampled on a sphere around the scene: azimuth uniform,
+elevation uniform in sin (area-uniform on the sphere).
 """
 
 import math
@@ -38,7 +37,7 @@ def sample_random_cameras(n_views, center, radius,
     sin_hi = math.sin(math.radians(elevation_range_deg[1]))
     elevation = torch.asin(torch.rand(n_views, device=device) * (sin_hi - sin_lo) + sin_lo)
 
-    # Camera positions (y-up world), same parametrization as camera.py
+    # Camera positions (y-up world)
     positions = center + distance * torch.stack([
         torch.cos(elevation) * torch.cos(azimuth),
         torch.sin(elevation),
