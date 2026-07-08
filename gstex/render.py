@@ -96,10 +96,10 @@ def render_gaussians(gaussians, colors, viewmats, Ks, width, height,
     """
     device = colors.device
 
-    # gsplat's packed rasterization path flattens the camera dim, so backgrounds
-    # must be a single [3] color shared across all cameras in this call.
+    # Composite the background ourselves: gsplat 1.5.x's packed path rejects
+    # [C, 3] backgrounds and does out-of-bounds per-camera reads on a [3] one.
     if background is None or background == 'black':
-        bg = torch.zeros(3, device=device)
+        bg = None
     elif background == 'white':
         bg = torch.ones(3, device=device)
     elif background == 'random':
@@ -118,9 +118,11 @@ def render_gaussians(gaussians, colors, viewmats, Ks, width, height,
         width=width,
         height=height,
         sh_degree=sh_degree,
-        backgrounds=bg,
         render_mode='RGB',
-    )                                                                # [C, H, W, 3]
+    )                                    # renders [C, H, W, 3], alphas [C, H, W, 1]
+
+    if bg is not None:
+        renders = renders + (1.0 - alphas) * bg
 
     images = renders.permute(0, 3, 1, 2)                             # [C, 3, H, W]
     return images.clamp(0.0, 1.0)
