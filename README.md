@@ -17,7 +17,8 @@ MeshNCA VGG / optimal-transport style loss.
 | `gstex/nca.py` | `GaussianNCA` — state `[geometry(11, read-only) \| SH \| hidden]`, zero-init update MLP, stochastic per-splat update mask (fire rate) |
 | `gstex/render.py` | gsplat rasterization wrapper + random spherical viewpoint sampling |
 | `gstex/trainer.py` | Sample-pool persistence training; only NCA weights are optimized |
-| `appearance_loss.py` | Reused from MeshNCA (VGG-16 + relaxed-EMD optimal transport style loss) |
+| `gstex/logger.py` | `TrainLogger` — all training telemetry: progress bar, per-iteration CSV log, eval messages, render snapshots (owns `--render_interval` / `--eval_interval` schedule) |
+| `gstex/appearance_loss.py` | Reused from MeshNCA (VGG-16 + relaxed-EMD optimal transport style loss) |
 
 State SH scope is configurable: `--sh_mode dc` (view-independent color, render SH degree 0)
 or `--sh_mode full` (all SH bands of the scene, view-dependent texture).
@@ -39,7 +40,8 @@ python scripts/smoke_test.py --scene data/scenes/<scene>.ply
 python train.py --scene data/scenes/<scene>.ply --texture data/textures/<tex>.jpg \
     --sh_mode dc --out_dir out/<run>
 
-# Outputs: out/<run>/renders/  (progress grids: target vs. rendered)
+# Outputs: out/<run>/renders/  (progress grids: target vs. rendered, every --render_interval)
+#          out/<run>/loss_log.csv  (per-iteration losses + periodic eval-probe loss)
 #          out/<run>/checkpoints/
 #          out/<run>/textured.ply  (open in any 3DGS viewer)
 ```
