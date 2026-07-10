@@ -48,13 +48,14 @@ def main():
     p.add_argument('--radius', type=float, default=1.0)
     p.add_argument('--sh_degree', type=int, default=3,
                    help='SH degree of the output (bands above 0 are zero)')
+    p.add_argument('--overlap_factor', type=float, default=0.8, help='decides the splat radii')
     args = p.parse_args()
 
     normals = fibonacci_sphere(args.n)
     means = normals * args.radius
 
     # each disc covers ~ its share of the sphere's area, with some overlap
-    disc_radius = 1.6 * args.radius * np.sqrt(4.0 / args.n)
+    disc_radius = args.overlap_factor * args.radius * np.sqrt(4.0 / args.n)
     log_scales = np.log(np.array([disc_radius, disc_radius, 0.1 * disc_radius],
                                  dtype=np.float32))
     log_scales = np.tile(log_scales, (args.n, 1))

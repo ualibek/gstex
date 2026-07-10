@@ -157,6 +157,7 @@ class Trainer:
             if iteration % cfg['checkpoint_interval'] == 0 or iteration == cfg['iterations']:
                 self.save_checkpoint(iteration)
 
+        self.logger.plot_eval_loss()
         self.export_textured_ply(os.path.join(self.out_dir, 'textured.ply'))
 
     # ------------------------------------------------------------------ #

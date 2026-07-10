@@ -10,10 +10,12 @@ from tqdm import tqdm
 
 class TrainLogger:
     def __init__(self, out_dir, n_iterations, render_interval, eval_interval):
+        self.out_dir = out_dir
         self.n_iterations = n_iterations
         self.render_interval = render_interval
         self.eval_interval = eval_interval
         self.progress = None
+        self.eval_history = []                  # (iteration, eval_loss) pairs
 
         self.renders_dir = os.path.join(out_dir, 'renders')
         os.makedirs(self.renders_dir, exist_ok=True)
@@ -43,6 +45,7 @@ class TrainLogger:
         summary is given.
         """
         if eval_loss is not None:
+            self.eval_history.append((iteration, eval_loss))
             self.message(f"[eval @ {iteration:6d}] deterministic style loss: {eval_loss:.4f}")
 
         self.progress.set_postfix(
@@ -62,6 +65,36 @@ class TrainLogger:
     def save_render(self, iteration, image):
         """Save a PIL summary image for this iteration."""
         image.save(os.path.join(self.renders_dir, f'iter_{iteration:06d}.png'))
+
+    def plot_eval_loss(self):
+        """Plot the deterministic eval-loss curve to <out_dir>/eval_loss.png."""
+        if not self.eval_history:
+            self.message("No eval probes were recorded; skipping eval-loss plot.")
+            return None
+
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+
+        iterations, losses = zip(*self.eval_history)
+
+        fig, ax = plt.subplots(figsize=(7, 4))
+        ax.plot(iterations, losses, color='#2a78d6', linewidth=1.8,
+                marker='o' if len(iterations) <= 60 else None, markersize=3.5)
+        ax.set_xlabel('iteration')
+        ax.set_ylabel('deterministic style loss')
+        ax.set_title('Eval loss (fixed seed, cameras and rollout)')
+        ax.set_xlim(left=0)
+        ax.grid(color='#e3e3e3', linewidth=0.6)
+        ax.set_axisbelow(True)
+        for spine in ('top', 'right'):
+            ax.spines[spine].set_visible(False)
+
+        path = os.path.join(self.out_dir, 'eval_loss.png')
+        fig.savefig(path, dpi=150, bbox_inches='tight')
+        plt.close(fig)
+        self.message(f"Saved eval-loss plot to {path}")
+        return path
 
     @staticmethod
     def message(text):
